@@ -1,5 +1,5 @@
 ## Description
-Automatically bypasses work.ink links and redirects you to the final destination. More websites will be added in future updates.
+Bypasses work.ink links; more websites coming soon.
 
 ## Installation
 1. Install a userscript manager (e.g., [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/)).
