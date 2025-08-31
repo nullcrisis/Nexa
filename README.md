@@ -1,4 +1,4 @@
-## Description
+## Info
 Bypasses work.ink links; more websites coming soon.
 
 ## Installation
