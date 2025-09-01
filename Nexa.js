@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         work.ink Bypass
 // @namespace    http://tampermonkey.net/
-// @version      v0.05
+// @version      v0.04 / Downgrading 4 rn
 // @description  Automatically bypasses work.ink links
 // @author       nullcrisis
 // @match        https://work.ink/*
@@ -58,7 +58,7 @@
     _onLinkDestination = null;
 
   // Constants
-  function Client() {
+  function ClientPackets() {
     return {
       ANNOUNCE: "c_announce",
       MONETIZATION: "c_monetization",
@@ -76,8 +76,8 @@
     };
   }
 
-  function Send() {
-    const Packets = Client();
+  function SendProxy() {
+    const Packets = ClientPackets();
 
     return function (...Args) {
       const Type = Args[0];
@@ -150,7 +150,7 @@
     };
   }
 
-  function Info() {
+  function InfoProxy() {
     return function (...Args) {
       const Link = Args[0];
 
@@ -172,7 +172,7 @@
     };
   }
 
-  function Dest() {
+  function DestProxy() {
     return function (...Args) {
       const Payload = Args[0];
 
@@ -192,9 +192,9 @@
     _onLinkInfo = Info.Fn;
     _onLinkDestination = Dest.Fn;
 
-    const SendProxyObj = Send();
-    const InfoProxyObj = Info();
-    const DestProxyObj = Dest();
+    const SendProxyObj = SendProxy();
+    const InfoProxyObj = InfoProxy();
+    const DestProxyObj = DestProxy();
 
     Object.defineProperty(_sessionController, Send.Name, {
       get() {
@@ -251,7 +251,7 @@
     return Reflect.set(Object, Property, Value, Receiver);
   }
 
-  function Component(Component) {
+  function CompProxy(Component) {
     return new Proxy(Component, {
       construct(Target, Args) {
         const Result = Reflect.construct(Target, Args);
@@ -264,30 +264,30 @@
     });
   }
 
-  function Node(Result) {
+  function NodeProxy(Result) {
     return new Proxy(Result, {
       get(Target, Property, Receiver) {
-        if (Property === "component") return Component(Target.component);
+        if (Property === "component") return CompProxy(Target.component);
         return Reflect.get(Target, Property, Receiver);
       },
     });
   }
 
-  function Async(Node) {
+  function AsyncNode(Node) {
     return async (...Args) => {
       const Result = await Node(...Args);
       Log("Node:", Result);
-      return Node(Result);
+      return NodeProxy(Result);
     };
   }
 
-  function Kit(Kit) {
+  function KitProxy(Kit) {
     if (typeof Kit !== "object" || !Kit) return [false, Kit];
 
     const Start = "start" in Kit && Kit.start;
     if (!Start) return [false, Kit];
 
-    const Type = new Proxy(Kit, {
+    const ProxyKit = new Proxy(Kit, {
       get(Target, Property, Receiver) {
         if (Property === "start") {
           return function (...Args) {
@@ -301,7 +301,7 @@
               typeof Options.node_ids === "object"
             ) {
               const Node = Module.nodes[Options.node_ids[1]];
-              Module.nodes[Options.node_ids[1]] = Async(Node);
+              Module.nodes[Options.node_ids[1]] = AsyncNode(Node);
             }
 
             Log("Kit.Start Hooked", Options);
@@ -312,10 +312,10 @@
       },
     });
 
-    return [true, Type];
+    return [true, ProxyKit];
   }
 
-  function Setup() {
+  function KitSetup() {
     const OriginalPromiseAll = unsafeWindow.Promise.all;
     let Intercepted = false;
 
@@ -329,7 +329,7 @@
           Result.then(([Kit, App, ...Args]) => {
             Log("Modules Loaded");
 
-            const [Success, WrappedKit] = Kit(Kit);
+            const [Success, WrappedKit] = KitProxy(Kit);
             if (Success) {
               unsafeWindow.Promise.all = OriginalPromiseAll;
               Log("Wrapped Kit:", WrappedKit, App);
@@ -345,7 +345,7 @@
   }
 
   // Initialize Kit
-  Setup();
+  KitSetup();
 
   // Remove Ads
   const Observer = new MutationObserver((Mutations) => {
