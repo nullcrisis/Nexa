@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         work.ink Bypass
 // @namespace    http://tampermonkey.net/
-// @version      v0.04
+// @version      v0.05
 // @description  Automatically bypasses work.ink links
 // @author       nullcrisis
 // @match        https://work.ink/*
@@ -36,7 +36,7 @@
   Log("Solve Captcha 2 Continue");
 
   const Mapping = {
-    Send: ["sendMessage", "sendMsg", "writeMessage"],
+    Send: ["sendMessage", "sendMsg", "writeMessage", "writeMsg"],
     Info: ["onLinkInfo"],
     Dest: ["onLinkDestination"],
   };
@@ -58,7 +58,7 @@
     _onLinkDestination = null;
 
   // Constants
-  function ClientPackets() {
+  function Client() {
     return {
       ANNOUNCE: "c_announce",
       MONETIZATION: "c_monetization",
@@ -76,8 +76,8 @@
     };
   }
 
-  function SendProxy() {
-    const Packets = ClientPackets();
+  function Send() {
+    const Packets = Client();
 
     return function (...Args) {
       const Type = Args[0];
@@ -150,7 +150,7 @@
     };
   }
 
-  function InfoProxy() {
+  function Info() {
     return function (...Args) {
       const Link = Args[0];
 
@@ -172,7 +172,7 @@
     };
   }
 
-  function DestProxy() {
+  function Dest() {
     return function (...Args) {
       const Payload = Args[0];
 
@@ -192,9 +192,9 @@
     _onLinkInfo = Info.Fn;
     _onLinkDestination = Dest.Fn;
 
-    const SendProxyObj = SendProxy();
-    const InfoProxyObj = InfoProxy();
-    const DestProxyObj = DestProxy();
+    const SendProxyObj = Send();
+    const InfoProxyObj = Info();
+    const DestProxyObj = Dest();
 
     Object.defineProperty(_sessionController, Send.Name, {
       get() {
@@ -251,7 +251,7 @@
     return Reflect.set(Object, Property, Value, Receiver);
   }
 
-  function CompProxy(Component) {
+  function Component(Component) {
     return new Proxy(Component, {
       construct(Target, Args) {
         const Result = Reflect.construct(Target, Args);
@@ -264,30 +264,30 @@
     });
   }
 
-  function NodeProxy(Result) {
+  function Node(Result) {
     return new Proxy(Result, {
       get(Target, Property, Receiver) {
-        if (Property === "component") return CompProxy(Target.component);
+        if (Property === "component") return Component(Target.component);
         return Reflect.get(Target, Property, Receiver);
       },
     });
   }
 
-  function AsyncNode(Node) {
+  function Async(Node) {
     return async (...Args) => {
       const Result = await Node(...Args);
       Log("Node:", Result);
-      return NodeProxy(Result);
+      return Node(Result);
     };
   }
 
-  function KitProxy(Kit) {
+  function Kit(Kit) {
     if (typeof Kit !== "object" || !Kit) return [false, Kit];
 
     const Start = "start" in Kit && Kit.start;
     if (!Start) return [false, Kit];
 
-    const ProxyKit = new Proxy(Kit, {
+    const Type = new Proxy(Kit, {
       get(Target, Property, Receiver) {
         if (Property === "start") {
           return function (...Args) {
@@ -301,7 +301,7 @@
               typeof Options.node_ids === "object"
             ) {
               const Node = Module.nodes[Options.node_ids[1]];
-              Module.nodes[Options.node_ids[1]] = AsyncNode(Node);
+              Module.nodes[Options.node_ids[1]] = Async(Node);
             }
 
             Log("Kit.Start Hooked", Options);
@@ -312,10 +312,10 @@
       },
     });
 
-    return [true, ProxyKit];
+    return [true, Type];
   }
 
-  function KitSetup() {
+  function Setup() {
     const OriginalPromiseAll = unsafeWindow.Promise.all;
     let Intercepted = false;
 
@@ -329,7 +329,7 @@
           Result.then(([Kit, App, ...Args]) => {
             Log("Modules Loaded");
 
-            const [Success, WrappedKit] = KitProxy(Kit);
+            const [Success, WrappedKit] = Kit(Kit);
             if (Success) {
               unsafeWindow.Promise.all = OriginalPromiseAll;
               Log("Wrapped Kit:", WrappedKit, App);
@@ -345,7 +345,7 @@
   }
 
   // Initialize Kit
-  KitSetup();
+  Setup();
 
   // Remove Ads
   const Observer = new MutationObserver((Mutations) => {
