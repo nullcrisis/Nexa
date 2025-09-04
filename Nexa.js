@@ -100,7 +100,7 @@
 				Log("Captcha Solved");
 
 				for (const social of _sessionController.linkInfo.socials) {
-					_sendMessage.call(this, clientPacketTypes.SOCIAL_STARTED, {
+					_sendMessage.call(this, Packets.SOCIAL_STARTED, {
 						url: social.url,
 					});
 				}
@@ -110,7 +110,7 @@
 					switch (monetization) {
 						case 22: {
 							// readArticles2
-							_sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+							_sendMessage.call(this, Packets.MONETIZATION, {
 								type: "readArticles2",
 								payload: {
 									event: "read",
@@ -121,13 +121,13 @@
 
 						case 25: {
 							// operaGX
-							_sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+							_sendMessage.call(this, Packets.MONETIZATION, {
 								type: "operaGX",
 								payload: {
 									event: "start",
 								},
 							});
-							_sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+							_sendMessage.call(this, Packets.MONETIZATION, {
 								type: "operaGX",
 								payload: {
 									event: "installClicked",
@@ -143,13 +143,13 @@
 
 						case 34: {
 							// operaGX
-							_sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+							_sendMessage.call(this, Packets.MONETIZATION, {
 								type: "norton",
 								payload: {
 									event: "start",
 								},
 							});
-							_sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+							_sendMessage.call(this, Packets.MONETIZATION, {
 								type: "norton",
 								payload: {
 									event: "installClicked",
@@ -159,7 +159,7 @@
 
 						case 71: {
 							// externalArticles
-							_sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+							_sendMessage.call(this, Packets.MONETIZATION, {
 								type: "externalArticles",
 								payload: {
 									event: "installClicked",
