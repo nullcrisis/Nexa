@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexa
 // @namespace    http://tampermonkey.net/
-// @version      0.0.8
+// @version      0.0.9
 // @description  Automatically bypasses links
 // @author       nullcrisis
 // @updateURL    https://github.com/nullcrisis/Nexa/raw/refs/heads/main/Nexa.js
@@ -30,7 +30,7 @@
     Log('Solve Captcha 2 Continue');
     //
     const Mapping = {
-        Send: ['sendMessage','sendMsg','writeMessage','writeMsg'],
+        Send: ['sendMessage', 'sendMsg', 'writeMessage', 'writeMsg'],
         Info: ['onLinkInfo'],
         Dest: ['onLinkDestination'],
     };
@@ -40,44 +40,48 @@
             const Name = Candidates[i];
             if (typeof Obj[Name] === 'function') {
                 return { Fn: Obj[Name], Index: i, Name };
-            };
-        };
+            }
+        }
         return { Fn: null, Index: -1, Name: null };
-    };
+    }
     //
-    let _sessionController = null;
-    let _sendMessage, _onLinkInfo, _onLinkDestination = null;
+	let _sessionController,
+		_sendMessage,
+		_onLinkInfo,
+		_onLinkDestination = undefined;
     //
-    function ClientPackets() {
+    function Client() {
         return {
-            ANNOUNCE:              'c_announce',
-            MONETIZATION:          'c_monetization',
-            SOCIAL_STARTED:        'c_social_started',
-            RECAPTCHA_RESPONSE:    'c_recaptcha_response',
-            HCAPTCHA_RESPONSE:     'c_hcaptcha_response',
-            TURNSTILE_RESPONSE:    'c_turnstile_response',
-            ADBLOCKER_DETECTED:    'c_adblocker_detected',
-            FOCUS_LOST:            'c_focus_lost',
-            OFFERS_SKIPPED:        'c_offers_skipped',
-            FOCUS:                 'c_focus',
-            WORKINK_PASS_AVAILABLE:'c_workink_pass_available',
-            WORKINK_PASS_USE:      'c_workink_pass_use',
-            PING:                  'c_ping',
+            ANNOUNCE:               'c_announce',
+            MONETIZATION:           'c_monetization',
+            SOCIAL_STARTED:         'c_social_started',
+            RECAPTCHA_RESPONSE:     'c_recaptcha_response',
+            HCAPTCHA_RESPONSE:      'c_hcaptcha_response',
+            TURNSTILE_RESPONSE:     'c_turnstile_response',
+            ADBLOCKER_DETECTED:     'c_adblocker_detected',
+            FOCUS_LOST:             'c_focus_lost',
+            OFFERS_SKIPPED:         'c_offers_skipped',
+            FOCUS:                  'c_focus',
+            WORKINK_PASS_AVAILABLE: 'c_workink_pass_available',
+            WORKINK_PASS_USE:       'c_workink_pass_use',
+            PING:                   'c_ping',
         };
-    };
+    }
     //
     function SendProxy() {
-        const Packets = ClientPackets();
+        const Packets = Client();
         return function(...Args) {
             const Type = Args[0];
             const Data = Args[1];
             //
-            Log('Sent:', Type, Data);
+           	if (Type !== Packets.PING) {
+				Log("Sent:", Type, Data);
+			}
             //
             if (Type === Packets.ADBLOCKER_DETECTED) {
                 Warn('Adblocker Blocked');
                 return;
-            };
+            }
             //
             if (_sessionController && _sessionController.linkInfo && Type === Packets.TURNSTILE_RESPONSE) {
                 const Result = _sendMessage.apply(this, Args);
@@ -86,69 +90,94 @@
                 //
                 for (const social of _sessionController.linkInfo.socials) {
                     _sendMessage.call(this, Packets.SOCIAL_STARTED, { url: social.url });
-                };
+                }
                 //
-                for (const monetization of _sessionController.linkInfo.monetizations) {
+                for (const monetizationIdx in _sessionController.linkInfo.monetizations) {
+                    const monetization = _sessionController.linkInfo.monetizations[monetizationIdx];
+                    //
                     switch (monetization) {
                         case 22:
                             _sendMessage.call(this, Packets.MONETIZATION, {
-                                type: 'readArticles2',
-                                payload: { event: 'read' },
+                                type: "readArticles2",
+                                payload: { event: "read" },
                             });
                             break;
+                        //
                         case 25:
                             _sendMessage.call(this, Packets.MONETIZATION, {
-                                type: 'operaGX',
-                                payload: { event: 'start' },
+                                type: "operaGX",
+                                payload: { event: "start" },
                             });
                             _sendMessage.call(this, Packets.MONETIZATION, {
-                                type: 'operaGX',
-                                payload: { event: 'installClicked' },
+                                type: "operaGX",
+                                payload: { event: "installClicked" },
                             });
                             fetch('https://work.ink/_api/v2/callback/operaGX', {
                                 method: 'POST',
-                                body: JSON.stringify({ noteligible: true }),
+                                mode: 'no-cors',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    'noteligible': true
+                                })
                             });
                             break;
+                        //
                         case 34:
                             _sendMessage.call(this, Packets.MONETIZATION, {
-                                type: 'norton',
-                                payload: { event: 'start' },
+                                type: "norton",
+                                payload: { event: "start" },
                             });
                             _sendMessage.call(this, Packets.MONETIZATION, {
-                                type: 'norton',
-                                payload: { event: 'installClicked' },
+                                type: "norton",
+                                payload: { event: "installClicked" },
                             });
                             break;
+                        //
                         case 71:
                             _sendMessage.call(this, Packets.MONETIZATION, {
-                                type: 'externalArticles',
-                                payload: { event: 'installClicked' },
+                                type: "externalArticles",
+                                payload: { event: "start" },
+                            });
+                            _sendMessage.call(this, Packets.MONETIZATION, {
+                                type: "externalArticles",
+                                payload: { event: "installClicked" },
                             });
                             break;
+                        //
                         case 45:
                             _sendMessage.call(this, Packets.MONETIZATION, {
-                                type: 'pdfeditor',
-                                payload: { event: 'installed' },
+                                type: "pdfeditor",
+                                payload: { event: "installed" },
                             });
                             break;
+                        //
+                        case 43:
+                            _sendMessage.call(this, Packets.MONETIZATION, {
+                                type: "temuMobile",
+                                payload: { event: "installClicked" },
+                            });
+                            break;
+                        //
                         case 57:
                             _sendMessage.call(this, Packets.MONETIZATION, {
-                                type: 'betterdeals',
-                                payload: { event: 'installed' },
+                                type: "betterdeals",
+                                payload: { event: "installed" },
                             });
                             break;
+                        //
                         default:
-                            Log('Unknown Monetization:', typeof monetization, monetization);
+                            Log("Unknown Monetization:", typeof monetization, monetization);
                             break;
-                    };
-                };
+                    }
+                }
                 return Result;
-            };
+            }
             //
             return _sendMessage.apply(this, Args);
         };
-    };
+    }
     //
     function InfoProxy() {
         return function(...Args) {
@@ -165,7 +194,7 @@
             //
             return _onLinkInfo.apply(this, Args);
         };
-    };
+    }
     //
     function DestProxy() {
         return function(...Args) {
@@ -176,7 +205,7 @@
             //
             return _onLinkDestination.apply(this, Args);
         };
-    };
+    }
     //
     function Session() {
         const Send = Resolve(_sessionController, Mapping.Send);
@@ -213,7 +242,7 @@
         });
         //
         Log(`Session Proxies: ${Send.Name}, ${Info.Name}, ${Dest.Name}`);
-    };
+    }
     //
     function Check(Object, Property, Value, Receiver) {
         Log('Check:', Property, Value);
@@ -229,10 +258,10 @@
             _sessionController = Value;
             Log('Intercepted Session:', _sessionController);
             Session();
-        };
+        }
         //
         return Reflect.set(Object, Property, Value, Receiver);
-    };
+    }
     //
     function CompProxy(Component) {
         return new Proxy(Component, {
@@ -243,7 +272,7 @@
                 return Result;
             },
         });
-    };
+    }
     //
     function NodeProxy(Result) {
         return new Proxy(Result, {
@@ -252,7 +281,7 @@
                 return Reflect.get(Target, Property, Receiver);
             },
         });
-    };
+    }
     //
     function AsyncNode(Node) {
         return async(...Args) => {
@@ -260,7 +289,7 @@
             Log('Node:', Result);
             return NodeProxy(Result);
         };
-    };
+    }
     //
     function KitProxy(Kit) {
         if (typeof Kit !== 'object' || !Kit) return [false, Kit];
@@ -283,17 +312,17 @@
                         ) {
                             const Node = Module.nodes[Options.node_ids[1]];
                             Module.nodes[Options.node_ids[1]] = AsyncNode(Node);
-                        };
+                        }
                         //
                         Log('Kit.Start Hooked', Options);
                         return Start.apply(this, Args);
                     };
-                };
+                }
                 return Reflect.get(Target, Property, Receiver);
             },
         });
         return [true, ProxyKit];
-    };
+    }
     //
     function KitSetup() {
         const OriginalPromiseAll = unsafeWindow.Promise.all;
@@ -311,14 +340,14 @@
                         if (Success) {
                             unsafeWindow.Promise.all = OriginalPromiseAll;
                             Log('Wrapped Kit:', WrappedKit, App);
-                        };
+                        }
                         Resolve([WrappedKit, App, ...Args]);
                     });
                 });
-            };
+            }
             return await Result;
         };
-    };
+    }
     //
     KitSetup();
     //
@@ -329,14 +358,14 @@
                     if (Node.classList?.contains('adsbygoogle')) {
                         Node.remove();
                         Log('Removed Ad:', Node);
-                    };
+                    }
                     Node.querySelectorAll?.('.adsbygoogle').forEach((Element) => {
                         Element.remove();
                         Log('Removed Nested Ad:', Element);
                     });
-                };
-            };
-        };
+                }
+            }
+        }
     });
     //
     Observer.observe(unsafeWindow.document.documentElement, {
