@@ -46,9 +46,9 @@
     }
     //
 	let _sessionController,
-		_sendMessage,
-		_onLinkInfo,
-		_onLinkDestination = undefined;
+	_sendMessage,
+	_onLinkInfo,
+	_onLinkDestination = undefined;
     //
     function Client() {
         return {
