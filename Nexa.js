@@ -254,7 +254,7 @@
 			//
 			for (let i = 30; i >= 0; i--) {
 				setTimeout(
-					() => (Status.textContent = `Waiting ${i}s`),
+					() => (Status.textContent = `Redirecting in ${i}s`),
 					(30 - i) * 1000,
 				);
 			}
